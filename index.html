@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提现审批</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: 14px;
+        }
+        /* 顶部导航 */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+        }
+        .breadcrumb {
+            color: #666;
+        }
+        .breadcrumb a {
+            color: #666;
+            text-decoration: none;
+        }
+        .breadcrumb .current {
+            color: #333;
+        }
+        /* 主内容区 */
+        .container {
+            padding: 24px;
+        }
+        /* 筛选栏 */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .filter-input, .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #fff;
+            min-width: 140px;
+        }
+        .query-btn, .export-btn {
+            padding: 8px 20px;
+            background-color: #fff;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .query-btn:hover, .export-btn:hover {
+            color: #1677ff;
+            border-color: #1677ff;
+        }
+        /* 表格样式 */
+        .table-wrapper {
+            background-color: #fff;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 16px 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        th {
+            background-color: #fafafa;
+            font-weight: 500;
+            color: #666;
+            font-size: 12px;
+        }
+        .user-id-col .nick {
+            display: block;
+            font-weight: 500;
+            color: #333;
+        }
+        .user-id-col .id {
+            display: block;
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        .amount {
+            color: #722ed1;
+            font-weight: 500;
+        }
+        .pay-method {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pay-tag.wechat {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #389e0d;
+            background-color: #b7eb8f;
+        }
+        .pay-account {
+            font-size: 12px;
+            color: #666;
+        }
+        /* 状态标签 */
+        .status-tag {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-tag.approved {
+            background-color: #e6f7ff;
+            color: #096dd9;
+        }
+        .status-tag.rejected {
+            background-color: #fff2f0;
+            color: #cf1322;
+        }
+        .status-tag.pending {
+            background-color: #fff7e6;
+            color: #d48806;
+        }
+        .audit-empty {
+            color: #999;
+            font-size: 12px;
+        }
+        /* 操作按钮 */
+        .op-btn {
+            padding: 6px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .op-btn.audit {
+            background-color: #1f1f23;
+            color: #fff;
+        }
+        .op-btn.detail {
+            background-color: #fff;
+            border: 1px solid #1677ff;
+            color: #1677ff;
+        }
+        /* 分页区域 */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 16px 12px;
+            background: #fff;
+            border-top: 1px solid #f0f0f0;
+        }
+        .pagination button {
+            padding: 6px 12px;
+            border: 1px solid #d9d9d9;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            cursor: not-allowed;
+            color: #ccc;
+        }
+        .page-input {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            text-align: center;
+        }
+        /* 弹窗公共样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .modal-content {
+            background-color: #fff;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            padding: 32px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #f5f7fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #666;
+        }
+        .modal-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 24px;
+        }
+        .info-card {
+            background-color: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .info-item .label {
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+        .info-item .value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a202c;
+            word-break: break-all;
+        }
+        .info-item .value.amount {
+            color: #4f46e5;
+            font-size: 16px;
+        }
+        .textarea-wrapper {
+            margin-bottom: 24px;
+        }
+        .textarea-wrapper.read-only .audit-textarea {
+            background: #f5f5f5;
+            cursor: default;
+        }
+        .textarea-label {
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .audit-textarea {
+            width: 100%;
+            height: 120px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #fff;
+            padding: 12px;
+            font-size: 14px;
+            resize: none;
+        }
+        .textarea-footer {
+            text-align: right;
+            font-size: 12px;
+            color: #718096;
+            margin-top: 4px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 16px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+        }
+        .modal-btn.reject {
+            background-color: #fff;
+            border: 1px solid #d9d9d9;
+            color: #333;
+        }
+        .modal-btn.approve {
+            background-color: #1677ff;
+            color: #fff;
+        }
+        /* 二次确认弹窗样式 */
+        .confirm-modal .modal-content {
+            text-align: center;
+            max-width: 400px;
+            padding: 30px 24px;
+        }
+        .confirm-modal .confirm-text {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .confirm-modal .modal-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+        .confirm-modal .modal-btn {
+            flex: 1;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            border: 1px solid #d9d9d9;
+            background: #fff;
+            color: #333;
+        }
+        .confirm-modal .modal-btn.confirm {
+            background-color: #1677ff;
+            color: #fff;
+            border-color: #1677ff;
+        }
+        /* 隐藏操作按钮 */
+        .hide-buttons {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="header">
+        <div class="breadcrumb">
+            <a href="#">运营管理</a>
+            <span> > </span>
+            <span class="current">提现审批</span>
+        </div>
+        <!-- 已移除：消息图标、头像、昵称、退出按钮区域 -->
+        <div></div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="container">
+        <!-- 筛选栏：新增导出按钮 -->
+        <div class="filter-bar">
+            <input type="text" class="filter-input" placeholder="用户ID">
+            <input type="text" class="filter-input" placeholder="用户手机">
+            <select class="filter-select">
+                <option value="">收款方式</option>
+                <option value="wechat">微信</option>
+            </select>
+            <select class="filter-select">
+                <option value="">状态</option>
+                <option value="pending">待审核</option>
+                <option value="approved">审核通过</option>
+                <option value="rejected">审核驳回</option>
+            </select>
+            <button class="query-btn" id="queryBtn">查询</button>
+            <button class="export-btn" id="exportBtn">导出</button>
+        </div>
+
+        <!-- 表格 -->
+        <div class="table-wrapper">
+            <table id="auditTable">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>用户ID</th>
+                        <th>提现金额</th>
+                        <th>收款方式 (账号脱敏)</th>
+                        <th>申请时间</th>
+                        <th>当前状态</th>
+                        <th>审批人</th>
+                        <th>审批时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr data-status="rejected" data-remark="资料不全，予以驳回">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">锦鲤小分队</span>
+                            <span class="id">58246845</span>
+                        </td>
+                        <td class="amount">¥2,400.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">138****5678</span>
+                        </td>
+                        <td>2023-08-14 09:25:00</td>
+                        <td><span class="status-tag rejected">审核驳回</span></td>
+                        <td>亚历克斯</td>
+                        <td>2025-12-24 10:30:40</td>
+                        <td><button class="op-btn detail open-audit">详情</button></td>
+                    </tr>
+                    <tr data-status="rejected" data-remark="银行卡信息有误">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">深山老林</span>
+                            <span class="id">57723145</span>
+                        </td>
+                        <td class="amount">¥12,000.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">lu***@qq.com</span>
+                        </td>
+                        <td>2023-08-14 11:45:00</td>
+                        <td><span class="status-tag rejected">审核驳回</span></td>
+                        <td>亚历克斯</td>
+                        <td>2023-08-14 12:00:00</td>
+                        <td><button class="op-btn detail open-audit">详情</button></td>
+                    </tr>
+                    <tr data-status="pending" data-remark="">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">古着实验室</span>
+                            <span class="id">51246845</span>
+                        </td>
+                        <td class="amount">¥450.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">136****7766</span>
+                        </td>
+                        <td>2023-08-15 09:00:00</td>
+                        <td><span class="status-tag pending">待审核</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><button class="op-btn audit open-audit">审批</button></td>
+                    </tr>
+                    <tr data-status="pending" data-remark="">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">萌宠生活</span>
+                            <span class="id">53246845</span>
+                        </td>
+                        <td class="amount">¥3,200.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">136****9876</span>
+                        </td>
+                        <td>2023-08-15 14:20:00</td>
+                        <td><span class="status-tag pending">待审核</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><button class="op-btn audit open-audit">审批</button></td>
+                    </tr>
+                    <tr data-status="pending" data-remark="">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">测试用户1</span>
+                            <span class="id">100001</span>
+                        </td>
+                        <td class="amount">¥1,000.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">139****1234</span>
+                        </td>
+                        <td>2023-08-16 08:20:00</td>
+                        <td><span class="status-tag pending">待审核</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><button class="op-btn audit open-audit">审批</button></td>
+                    </tr>
+                    <tr data-status="rejected" data-remark="金额超限">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">测试用户3</span>
+                            <span class="id">100003</span>
+                        </td>
+                        <td class="amount">¥20,000.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">137****5678</span>
+                        </td>
+                        <td>2023-08-16 10:05:00</td>
+                        <td><span class="status-tag rejected">审核驳回</span></td>
+                        <td>亚历克斯</td>
+                        <td>2023-08-16 10:10:00</td>
+                        <td><button class="op-btn detail open-audit">详情</button></td>
+                    </tr>
+                    <tr data-status="pending" data-remark="">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">测试用户4</span>
+                            <span class="id">100004</span>
+                        </td>
+                        <td class="amount">¥800.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">136****9876</span>
+                        </td>
+                        <td>2023-08-16 11:20:00</td>
+                        <td><span class="status-tag pending">待审核</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><button class="op-btn audit open-audit">审批</button></td>
+                    </tr>
+                    <tr data-status="pending" data-remark="">
+                        <td class="index-num"></td>
+                        <td class="user-id-col">
+                            <span class="nick">测试用户5</span>
+                            <span class="id">100005</span>
+                        </td>
+                        <td class="amount">¥1,500.00</td>
+                        <td class="pay-method">
+                            <span class="pay-tag wechat">微信</span>
+                            <span class="pay-account">136****9876</span>
+                        </td>
+                        <td>2023-08-16 14:30:00</td>
+                        <td><span class="status-tag pending">待审核</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><span class="audit-empty">-</span></td>
+                        <td><button class="op-btn audit open-audit">审批</button></td>
+                    </tr>
+                </tbody>
+                <!-- 分页区域 -->
+                <tfoot>
+                    <tr>
+                        <td colspan="9">
+                            <div class="pagination">
+                                <button id="prevPage">上一页</button>
+                                <span>第</span>
+                                <input type="number" class="page-input" id="pageInput" min="1" value="1">
+                                <span>页</span>
+                                <button id="goPage">跳转</button>
+                                <button id="nextPage">下一页</button>
+                                <span id="pageInfo"></span>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- 审批弹窗 -->
+    <div class="modal-overlay" id="auditModal">
+        <div class="modal-content">
+            <div class="modal-close" data-close="audit">×</div>
+            <h2 class="modal-title" id="modalTitle">提现审批</h2>
+            <div class="info-card">
+                <div class="info-item">
+                    <div class="label">用户ID</div>
+                    <div class="value" id="modalUserId">51246845</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">提现金额</div>
+                    <div class="value amount" id="modalAmount">¥450.00</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">收款账号</div>
+                    <div class="value" id="modalPayInfo">微信 - 13699887766</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">申请时间</div>
+                    <div class="value" id="modalTime">2023-08-15 09:00:00</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">审批人</div>
+                    <div class="value" id="modalAuditUser">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">审批时间</div>
+                    <div class="value" id="modalAuditTime">-</div>
+                </div>
+            </div>
+            <div class="textarea-wrapper" id="textareaWrap">
+                <label class="textarea-label" id="remarkLabel">审批意见</label>
+                <textarea class="audit-textarea" placeholder="如有驳回请务必填写原因..." id="auditRemark" maxlength="100"></textarea>
+                <div class="textarea-footer"><span id="charCount">0</span>/100</div>
+            </div>
+            <!-- 审批操作按钮 -->
+            <div class="modal-buttons" id="auditBtnGroup">
+                <button class="modal-btn reject" id="rejectBtn">驳回</button>
+                <button class="modal-btn approve" id="approveBtn">通过</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 二次确认弹窗 -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <div class="confirm-text">确认审批通过，提交后无法撤销？</div>
+            <div class="modal-buttons">
+                <button class="modal-btn" id="cancelConfirm">取消</button>
+                <button class="modal-btn confirm" id="confirmApprove">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 元素获取
+        const auditModal = document.getElementById('auditModal');
+        const confirmModal = document.getElementById('confirmModal');
+        const auditRemark = document.getElementById('auditRemark');
+        const charCount = document.getElementById('charCount');
+        const closeBtns = document.querySelectorAll('.modal-close');
+        const tableBody = document.getElementById('tableBody');
+        const textareaWrap = document.getElementById('textareaWrap');
+        const auditBtnGroup = document.getElementById('auditBtnGroup');
+        const modalTitle = document.getElementById('modalTitle');
+        const remarkLabel = document.getElementById('remarkLabel');
+        const queryBtn = document.getElementById('queryBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const prevPage = document.getElementById('prevPage');
+        const nextPage = document.getElementById('nextPage');
+        const goPage = document.getElementById('goPage');
+        const pageInput = document.getElementById('pageInput');
+        const pageInfo = document.getElementById('pageInfo');
+
+        let currentAuditRow = null;
+        // 分页配置
+        const pageSize = 10;
+        let currentPage = 1;
+        let totalPage = 1;
+        let allRows = [];
+
+        // 统一时间格式化函数：yyyy-MM-dd HH:mm:ss
+        function formatDate(date) {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const seconds = String(d.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // 排序权重：待审批=0 > 已驳回=1 > 已通过=2
+        function sortTable() {
+            allRows = Array.from(tableBody.querySelectorAll('tr'));
+            const sortWeight = { pending: 0, rejected: 1, approved: 2 };
+            allRows.sort((a, b) => {
+                const s1 = a.dataset.status;
+                const s2 = b.dataset.status;
+                return sortWeight[s1] - sortWeight[s2];
+            });
+            renderPage();
+        }
+
+        // 渲染当前页 + 序号
+        function renderPage() {
+            totalPage = Math.ceil(allRows.length / pageSize);
+            pageInfo.innerText = `共 ${allRows.length} 条，${totalPage} 页`;
+
+            // 页码边界控制
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPage) currentPage = totalPage;
+            pageInput.value = currentPage;
+
+            // 上下页禁用状态
+            prevPage.disabled = currentPage === 1;
+            nextPage.disabled = currentPage === totalPage;
+
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const showRows = allRows.slice(start, end);
+
+            tableBody.innerHTML = '';
+            showRows.forEach((row, idx) => {
+                const indexCell = row.querySelector('.index-num');
+                indexCell.innerText = start + idx + 1;
+                tableBody.appendChild(row);
+            });
+            bindOpBtn();
+        }
+
+        // 初始化
+        sortTable();
+
+        // 关闭所有弹窗
+        closeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                auditModal.style.display = 'none';
+                confirmModal.style.display = 'none';
+            });
+        });
+        [auditModal, confirmModal].forEach(modal => {
+            modal.addEventListener('click', e => {
+                if (e.target === modal) modal.style.display = 'none';
+            });
+        });
+
+        // 绑定操作按钮事件
+        function bindOpBtn() {
+            document.querySelectorAll('.open-audit').forEach(btn => {
+                btn.onclick = function () {
+                    currentAuditRow = this.closest('tr');
+                    const status = currentAuditRow.dataset.status;
+                    const remark = currentAuditRow.dataset.remark || '';
+
+                    const userId = currentAuditRow.querySelector('.user-id-col .id').textContent;
+                    const amount = currentAuditRow.querySelector('.amount').textContent;
+                    const payMethod = currentAuditRow.querySelector('.pay-tag').textContent;
+                    const payAccount = currentAuditRow.querySelector('.pay-account').textContent.replace(/\*/g, '9');
+                    const applyTime = currentAuditRow.cells[4].textContent;
+                    const auditUser = currentAuditRow.cells[6].textContent;
+                    const auditTime = currentAuditRow.cells[7].textContent;
+
+                    // 基础信息赋值
+                    document.getElementById('modalUserId').textContent = userId;
+                    document.getElementById('modalAmount').textContent = amount;
+                    document.getElementById('modalPayInfo').textContent = `${payMethod} - ${payAccount}`;
+                    document.getElementById('modalTime').textContent = applyTime;
+                    document.getElementById('modalAuditUser').textContent = auditUser;
+                    document.getElementById('modalAuditTime').textContent = auditTime;
+
+                    if (status === 'pending') {
+                        // 待审批：审批操作页
+                        modalTitle.innerText = '提现审批';
+                        remarkLabel.innerText = '审批意见';
+                        auditRemark.value = '';
+                        charCount.textContent = '0';
+                        textareaWrap.classList.remove('read-only');
+                        auditBtnGroup.classList.remove('hide-buttons');
+                        auditRemark.disabled = false;
+                        auditRemark.placeholder = '如有驳回请务必填写原因...';
+                    } else {
+                        // 已驳回/已通过：详情查看页
+                        modalTitle.innerText = '审批详情';
+                        remarkLabel.innerText = status === 'rejected' ? '驳回说明' : '审批意见';
+                        auditRemark.value = remark;
+                        charCount.textContent = auditRemark.value.length;
+                        textareaWrap.classList.add('read-only');
+                        auditBtnGroup.classList.add('hide-buttons');
+                        auditRemark.disabled = true;
+                        auditRemark.placeholder = '';
+                    }
+                    auditModal.style.display = 'flex';
+                };
+            });
+        }
+
+        // 文本域字数统计
+        auditRemark.addEventListener('input', () => {
+            charCount.textContent = auditRemark.value.length;
+        });
+
+        // 审批-驳回
+        document.getElementById('rejectBtn').addEventListener('click', () => {
+            if (!auditRemark.value.trim()) {
+                alert('驳回请务必填写原因！');
+                return;
+            }
+            if (currentAuditRow) {
+                const nowTime = formatDate(new Date());
+                currentAuditRow.dataset.status = 'rejected';
+                currentAuditRow.dataset.remark = auditRemark.value;
+                currentAuditRow.cells[5].innerHTML = '<span class="status-tag rejected">审核驳回</span>';
+                currentAuditRow.cells[6].textContent = '亚历克斯';
+                currentAuditRow.cells[7].textContent = nowTime;
+                currentAuditRow.cells[8].innerHTML = '<button class="op-btn detail open-audit">详情</button>';
+            }
+            alert(`已驳回，驳回说明：${auditRemark.value}`);
+            auditModal.style.display = 'none';
+            currentAuditRow = null;
+            sortTable();
+        });
+
+        // 审批-通过：弹出二次确认
+        document.getElementById('approveBtn').addEventListener('click', () => {
+            auditModal.style.display = 'none';
+            confirmModal.style.display = 'flex';
+        });
+
+        // 二次确认-取消
+        document.getElementById('cancelConfirm').addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+            auditModal.style.display = 'flex';
+        });
+
+        // 二次确认-确认
+        document.getElementById('confirmApprove').addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+            if (currentAuditRow) {
+                const nowTime = formatDate(new Date());
+                currentAuditRow.dataset.status = 'approved';
+                currentAuditRow.dataset.remark = auditRemark.value;
+                currentAuditRow.cells[5].innerHTML = '<span class="status-tag approved">审核通过</span>';
+                currentAuditRow.cells[6].textContent = '亚历克斯';
+                currentAuditRow.cells[7].textContent = nowTime;
+                currentAuditRow.cells[8].innerHTML = '<button class="op-btn detail open-audit">详情</button>';
+            }
+            alert('已通过该笔提现申请');
+            currentAuditRow = null;
+            sortTable();
+        });
+
+        // 查询按钮
+        queryBtn.addEventListener('click', function () {
+            alert('执行查询操作，刷新列表并回到第一页');
+            currentPage = 1;
+            sortTable();
+        });
+
+        // 导出按钮
+        exportBtn.addEventListener('click', function () {
+            alert('触发数据导出功能');
+        });
+
+        // 上一页
+        prevPage.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage();
+            }
+        });
+        // 下一页
+        nextPage.addEventListener('click', () => {
+            if (currentPage < totalPage) {
+                currentPage++;
+                renderPage();
+            }
+        });
+        // 页码跳转
+        goPage.addEventListener('click', () => {
+            let page = parseInt(pageInput.value);
+            if (isNaN(page) || page < 1 || page > totalPage) {
+                alert('请输入有效的页码');
+                pageInput.value = currentPage;
+                return;
+            }
+            currentPage = page;
+            renderPage();
+        });
+    </script>
+</body>
+</html>
