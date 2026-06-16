@@ -56,7 +56,7 @@
             background-color: #fff;
             min-width: 140px;
         }
-        .query-btn, .export-btn {
+        .query-btn, .export-btn, .setting-btn {
             padding: 8px 20px;
             background-color: #fff;
             border: 1px solid #d9d9d9;
@@ -64,7 +64,7 @@
             cursor: pointer;
             font-size: 14px;
         }
-        .query-btn:hover, .export-btn:hover {
+        .query-btn:hover, .export-btn:hover, .setting-btn:hover {
             color: #1677ff;
             border-color: #1677ff;
         }
@@ -339,6 +339,92 @@
         .hide-buttons {
             display: none !important;
         }
+
+        /* 审批设置弹窗样式 */
+        .setting-modal .modal-content {
+            max-width: 420px;
+        }
+        .setting-item {
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .setting-label {
+            font-size: 14px;
+            color: #333;
+            min-width: 90px;
+        }
+        /* 开关样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #1677ff;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+        /* 审批金额输入框 */
+        .amount-input-wrap {
+            display: none;
+            margin-top: 8px;
+            padding-left: 102px;
+        }
+        .amount-input-wrap.show {
+            display: block;
+        }
+        .amount-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        /* 吐司提示 */
+        .toast {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1001;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -349,13 +435,11 @@
             <span> > </span>
             <span class="current">提现审批</span>
         </div>
-        <!-- 已移除：消息图标、头像、昵称、退出按钮区域 -->
         <div></div>
     </div>
-
     <!-- 主内容区 -->
     <div class="container">
-        <!-- 筛选栏：新增导出按钮 -->
+        <!-- 筛选栏：新增 审批设置 按钮 -->
         <div class="filter-bar">
             <input type="text" class="filter-input" placeholder="用户ID">
             <input type="text" class="filter-input" placeholder="用户手机">
@@ -371,8 +455,8 @@
             </select>
             <button class="query-btn" id="queryBtn">查询</button>
             <button class="export-btn" id="exportBtn">导出</button>
+            <button class="setting-btn" id="settingBtn">审批设置</button>
         </div>
-
         <!-- 表格 -->
         <div class="table-wrapper">
             <table id="auditTable">
@@ -583,7 +667,6 @@
                 <textarea class="audit-textarea" placeholder="如有驳回请务必填写原因..." id="auditRemark" maxlength="100"></textarea>
                 <div class="textarea-footer"><span id="charCount">0</span>/100</div>
             </div>
-            <!-- 审批操作按钮 -->
             <div class="modal-buttons" id="auditBtnGroup">
                 <button class="modal-btn reject" id="rejectBtn">驳回</button>
                 <button class="modal-btn approve" id="approveBtn">通过</button>
@@ -601,6 +684,31 @@
             </div>
         </div>
     </div>
+
+    <!-- 审批设置弹窗 -->
+    <div class="modal-overlay" id="settingModal" class="setting-modal">
+        <div class="modal-content setting-modal">
+            <div class="modal-close" data-close="setting">×</div>
+            <h2 class="modal-title">审批设置</h2>
+            <div class="setting-item">
+                <span class="setting-label">人工审批</span>
+                <label class="switch">
+                    <input type="checkbox" id="manualSwitch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="amount-input-wrap" id="amountInputWrap">
+                <input type="text" class="amount-input" id="limitAmount" placeholder="请填写审批金额">
+            </div>
+            <div class="modal-buttons" style="margin-top: 30px;">
+                <button class="modal-btn reject" id="settingCancel">取消</button>
+                <button class="modal-btn approve" id="settingConfirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 吐司提示 -->
+    <div class="toast" id="toast">设置成功</div>
 
     <script>
         // 元素获取
@@ -621,13 +729,22 @@
         const goPage = document.getElementById('goPage');
         const pageInput = document.getElementById('pageInput');
         const pageInfo = document.getElementById('pageInfo');
-
         let currentAuditRow = null;
         // 分页配置
         const pageSize = 10;
         let currentPage = 1;
         let totalPage = 1;
         let allRows = [];
+
+        // 审批设置相关元素
+        const settingBtn = document.getElementById('settingBtn');
+        const settingModal = document.getElementById('settingModal');
+        const manualSwitch = document.getElementById('manualSwitch');
+        const amountInputWrap = document.getElementById('amountInputWrap');
+        const settingCancel = document.getElementById('settingCancel');
+        const settingConfirm = document.getElementById('settingConfirm');
+        const limitAmount = document.getElementById('limitAmount');
+        const toast = document.getElementById('toast');
 
         // 统一时间格式化函数：yyyy-MM-dd HH:mm:ss
         function formatDate(date) {
@@ -640,7 +757,6 @@
             const seconds = String(d.getSeconds()).padStart(2, '0');
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
-
         // 排序权重：待审批=0 > 已驳回=1 > 已通过=2
         function sortTable() {
             allRows = Array.from(tableBody.querySelectorAll('tr'));
@@ -652,25 +768,20 @@
             });
             renderPage();
         }
-
         // 渲染当前页 + 序号
         function renderPage() {
             totalPage = Math.ceil(allRows.length / pageSize);
             pageInfo.innerText = `共 ${allRows.length} 条，${totalPage} 页`;
-
             // 页码边界控制
             if (currentPage < 1) currentPage = 1;
             if (currentPage > totalPage) currentPage = totalPage;
             pageInput.value = currentPage;
-
             // 上下页禁用状态
             prevPage.disabled = currentPage === 1;
             nextPage.disabled = currentPage === totalPage;
-
             const start = (currentPage - 1) * pageSize;
             const end = start + pageSize;
             const showRows = allRows.slice(start, end);
-
             tableBody.innerHTML = '';
             showRows.forEach((row, idx) => {
                 const indexCell = row.querySelector('.index-num');
@@ -679,7 +790,6 @@
             });
             bindOpBtn();
         }
-
         // 初始化
         sortTable();
 
@@ -688,9 +798,10 @@
             btn.addEventListener('click', () => {
                 auditModal.style.display = 'none';
                 confirmModal.style.display = 'none';
+                settingModal.style.display = 'none';
             });
         });
-        [auditModal, confirmModal].forEach(modal => {
+        [auditModal, confirmModal, settingModal].forEach(modal => {
             modal.addEventListener('click', e => {
                 if (e.target === modal) modal.style.display = 'none';
             });
@@ -703,7 +814,6 @@
                     currentAuditRow = this.closest('tr');
                     const status = currentAuditRow.dataset.status;
                     const remark = currentAuditRow.dataset.remark || '';
-
                     const userId = currentAuditRow.querySelector('.user-id-col .id').textContent;
                     const amount = currentAuditRow.querySelector('.amount').textContent;
                     const payMethod = currentAuditRow.querySelector('.pay-tag').textContent;
@@ -711,7 +821,6 @@
                     const applyTime = currentAuditRow.cells[4].textContent;
                     const auditUser = currentAuditRow.cells[6].textContent;
                     const auditTime = currentAuditRow.cells[7].textContent;
-
                     // 基础信息赋值
                     document.getElementById('modalUserId').textContent = userId;
                     document.getElementById('modalAmount').textContent = amount;
@@ -719,7 +828,6 @@
                     document.getElementById('modalTime').textContent = applyTime;
                     document.getElementById('modalAuditUser').textContent = auditUser;
                     document.getElementById('modalAuditTime').textContent = auditTime;
-
                     if (status === 'pending') {
                         // 待审批：审批操作页
                         modalTitle.innerText = '提现审批';
@@ -837,6 +945,50 @@
             }
             currentPage = page;
             renderPage();
+        });
+
+        // ========== 审批设置弹窗逻辑 ==========
+        // 打开审批设置弹窗
+        settingBtn.addEventListener('click', () => {
+            settingModal.style.display = 'flex';
+        });
+
+        // 人工审批开关切换：控制金额输入框显示/隐藏
+        manualSwitch.addEventListener('change', () => {
+            if (manualSwitch.checked) {
+                amountInputWrap.classList.add('show');
+            } else {
+                amountInputWrap.classList.remove('show');
+            }
+        });
+
+        // 限制金额输入框只能输入数字
+        limitAmount.addEventListener('input', function () {
+            // 过滤非数字字符
+            this.value = this.value.replace(/[^\d]/g, '');
+        });
+
+        // 取消按钮：直接关闭，无提示
+        settingCancel.addEventListener('click', () => {
+            settingModal.style.display = 'none';
+        });
+
+        // 确认按钮：校验 + 提交
+        settingConfirm.addEventListener('click', () => {
+            // 开关开启时校验金额
+            if (manualSwitch.checked) {
+                const val = limitAmount.value.trim();
+                if (!val) {
+                    alert('请填写人工审批金额');
+                    return;
+                }
+            }
+            // 校验通过，展示吐司，3秒后关闭弹窗
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+                settingModal.style.display = 'none';
+            }, 3000);
         });
     </script>
 </body>
