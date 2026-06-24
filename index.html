@@ -56,7 +56,7 @@
             background-color: #fff;
             min-width: 140px;
         }
-        .query-btn, .export-btn, .setting-btn {
+        .query-btn, .export-btn {
             padding: 8px 20px;
             background-color: #fff;
             border: 1px solid #d9d9d9;
@@ -64,7 +64,7 @@
             cursor: pointer;
             font-size: 14px;
         }
-        .query-btn:hover, .export-btn:hover, .setting-btn:hover {
+        .query-btn:hover, .export-btn:hover {
             color: #1677ff;
             border-color: #1677ff;
         }
@@ -121,24 +121,32 @@
             font-size: 12px;
             color: #666;
         }
-        /* 状态标签 */
+        /* 状态标签样式 */
         .status-tag {
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 500;
         }
-        .status-tag.approved {
-            background-color: #e6f7ff;
-            color: #096dd9;
+        .status-tag.pending {
+            background-color: #fff7e6;
+            color: #d48806;
+        }
+        .status-tag.wait-pay {
+            background-color: #f0f2ff;
+            color: #4756cc;
+        }
+        .status-tag.cancel {
+            background-color: #fef0f0;
+            color: #a8071a;
         }
         .status-tag.rejected {
             background-color: #fff2f0;
             color: #cf1322;
         }
-        .status-tag.pending {
-            background-color: #fff7e6;
-            color: #d48806;
+        .status-tag.finish {
+            background-color: #f0fff4;
+            color: #237804;
         }
         .audit-empty {
             color: #999;
@@ -339,92 +347,6 @@
         .hide-buttons {
             display: none !important;
         }
-
-        /* 审批设置弹窗样式 */
-        .setting-modal .modal-content {
-            max-width: 420px;
-        }
-        .setting-item {
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .setting-label {
-            font-size: 14px;
-            color: #333;
-            min-width: 90px;
-        }
-        /* 开关样式 */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 22px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .3s;
-            border-radius: 22px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #1677ff;
-        }
-        input:checked + .slider:before {
-            transform: translateX(22px);
-        }
-        /* 审批金额输入框 */
-        .amount-input-wrap {
-            display: none;
-            margin-top: 8px;
-            padding-left: 102px;
-        }
-        .amount-input-wrap.show {
-            display: block;
-        }
-        .amount-input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        /* 吐司提示 */
-        .toast {
-            position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.7);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 4px;
-            font-size: 14px;
-            z-index: 1001;
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -439,7 +361,7 @@
     </div>
     <!-- 主内容区 -->
     <div class="container">
-        <!-- 筛选栏：新增 审批设置 按钮 -->
+        <!-- 筛选栏 -->
         <div class="filter-bar">
             <input type="text" class="filter-input" placeholder="用户ID">
             <input type="text" class="filter-input" placeholder="用户手机">
@@ -447,15 +369,17 @@
                 <option value="">收款方式</option>
                 <option value="wechat">微信</option>
             </select>
+            <!-- 状态下拉 -->
             <select class="filter-select">
                 <option value="">状态</option>
                 <option value="pending">待审核</option>
-                <option value="approved">审核通过</option>
-                <option value="rejected">审核驳回</option>
+                <option value="wait-pay">待收款</option>
+                <option value="cancel">已取消</option>
+                <option value="rejected">已驳回</option>
+                <option value="finish">已完结</option>
             </select>
             <button class="query-btn" id="queryBtn">查询</button>
             <button class="export-btn" id="exportBtn">导出</button>
-            <button class="setting-btn" id="settingBtn">审批设置</button>
         </div>
         <!-- 表格 -->
         <div class="table-wrapper">
@@ -474,7 +398,8 @@
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr data-status="rejected" data-remark="资料不全，予以驳回">
+                    <!-- 已取消 -->
+                    <tr data-status="cancel" data-remark="用户主动取消提现申请">
                         <td class="index-num"></td>
                         <td class="user-id-col">
                             <span class="nick">锦鲤小分队</span>
@@ -486,11 +411,12 @@
                             <span class="pay-account">138****5678</span>
                         </td>
                         <td>2023-08-14 09:25:00</td>
-                        <td><span class="status-tag rejected">审核驳回</span></td>
+                        <td><span class="status-tag cancel">已取消</span></td>
                         <td>亚历克斯</td>
                         <td>2025-12-24 10:30:40</td>
                         <td><button class="op-btn detail open-audit">详情</button></td>
                     </tr>
+                    <!-- 已驳回 -->
                     <tr data-status="rejected" data-remark="银行卡信息有误">
                         <td class="index-num"></td>
                         <td class="user-id-col">
@@ -503,12 +429,13 @@
                             <span class="pay-account">lu***@qq.com</span>
                         </td>
                         <td>2023-08-14 11:45:00</td>
-                        <td><span class="status-tag rejected">审核驳回</span></td>
+                        <td><span class="status-tag rejected">已驳回</span></td>
                         <td>亚历克斯</td>
                         <td>2023-08-14 12:00:00</td>
                         <td><button class="op-btn detail open-audit">详情</button></td>
                     </tr>
-                    <tr data-status="pending" data-remark="">
+                    <!-- 待收款 -->
+                    <tr data-status="wait-pay" data-remark="">
                         <td class="index-num"></td>
                         <td class="user-id-col">
                             <span class="nick">古着实验室</span>
@@ -520,12 +447,13 @@
                             <span class="pay-account">136****7766</span>
                         </td>
                         <td>2023-08-15 09:00:00</td>
-                        <td><span class="status-tag pending">待审核</span></td>
+                        <td><span class="status-tag wait-pay">待收款</span></td>
                         <td><span class="audit-empty">-</span></td>
                         <td><span class="audit-empty">-</span></td>
-                        <td><button class="op-btn audit open-audit">审批</button></td>
+                        <td><button class="op-btn detail open-audit">详情</button></td>
                     </tr>
-                    <tr data-status="pending" data-remark="">
+                    <!-- 已完结 -->
+                    <tr data-status="finish" data-remark="">
                         <td class="index-num"></td>
                         <td class="user-id-col">
                             <span class="nick">萌宠生活</span>
@@ -537,11 +465,12 @@
                             <span class="pay-account">136****9876</span>
                         </td>
                         <td>2023-08-15 14:20:00</td>
-                        <td><span class="status-tag pending">待审核</span></td>
-                        <td><span class="audit-empty">-</span></td>
-                        <td><span class="audit-empty">-</span></td>
-                        <td><button class="op-btn audit open-audit">审批</button></td>
+                        <td><span class="status-tag finish">已完结</span></td>
+                        <td>亚历克斯</td>
+                        <td>2023-08-15 14:25:00</td>
+                        <td><button class="op-btn detail open-audit">详情</button></td>
                     </tr>
+                    <!-- 待审核 -->
                     <tr data-status="pending" data-remark="">
                         <td class="index-num"></td>
                         <td class="user-id-col">
@@ -559,6 +488,7 @@
                         <td><span class="audit-empty">-</span></td>
                         <td><button class="op-btn audit open-audit">审批</button></td>
                     </tr>
+                    <!-- 已驳回 -->
                     <tr data-status="rejected" data-remark="金额超限">
                         <td class="index-num"></td>
                         <td class="user-id-col">
@@ -571,11 +501,12 @@
                             <span class="pay-account">137****5678</span>
                         </td>
                         <td>2023-08-16 10:05:00</td>
-                        <td><span class="status-tag rejected">审核驳回</span></td>
+                        <td><span class="status-tag rejected">已驳回</span></td>
                         <td>亚历克斯</td>
                         <td>2023-08-16 10:10:00</td>
                         <td><button class="op-btn detail open-audit">详情</button></td>
                     </tr>
+                    <!-- 待审核 -->
                     <tr data-status="pending" data-remark="">
                         <td class="index-num"></td>
                         <td class="user-id-col">
@@ -593,6 +524,7 @@
                         <td><span class="audit-empty">-</span></td>
                         <td><button class="op-btn audit open-audit">审批</button></td>
                     </tr>
+                    <!-- 待审核 -->
                     <tr data-status="pending" data-remark="">
                         <td class="index-num"></td>
                         <td class="user-id-col">
@@ -611,7 +543,6 @@
                         <td><button class="op-btn audit open-audit">审批</button></td>
                     </tr>
                 </tbody>
-                <!-- 分页区域 -->
                 <tfoot>
                     <tr>
                         <td colspan="9">
@@ -630,7 +561,6 @@
             </table>
         </div>
     </div>
-
     <!-- 审批弹窗 -->
     <div class="modal-overlay" id="auditModal">
         <div class="modal-content">
@@ -673,7 +603,6 @@
             </div>
         </div>
     </div>
-
     <!-- 二次确认弹窗 -->
     <div class="modal-overlay" id="confirmModal">
         <div class="modal-content">
@@ -684,32 +613,6 @@
             </div>
         </div>
     </div>
-
-    <!-- 审批设置弹窗 -->
-    <div class="modal-overlay" id="settingModal" class="setting-modal">
-        <div class="modal-content setting-modal">
-            <div class="modal-close" data-close="setting">×</div>
-            <h2 class="modal-title">审批设置</h2>
-            <div class="setting-item">
-                <span class="setting-label">人工审批</span>
-                <label class="switch">
-                    <input type="checkbox" id="manualSwitch">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="amount-input-wrap" id="amountInputWrap">
-                <input type="text" class="amount-input" id="limitAmount" placeholder="请填写审批金额">
-            </div>
-            <div class="modal-buttons" style="margin-top: 30px;">
-                <button class="modal-btn reject" id="settingCancel">取消</button>
-                <button class="modal-btn approve" id="settingConfirm">确认</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 吐司提示 -->
-    <div class="toast" id="toast">设置成功</div>
-
     <script>
         // 元素获取
         const auditModal = document.getElementById('auditModal');
@@ -736,17 +639,7 @@
         let totalPage = 1;
         let allRows = [];
 
-        // 审批设置相关元素
-        const settingBtn = document.getElementById('settingBtn');
-        const settingModal = document.getElementById('settingModal');
-        const manualSwitch = document.getElementById('manualSwitch');
-        const amountInputWrap = document.getElementById('amountInputWrap');
-        const settingCancel = document.getElementById('settingCancel');
-        const settingConfirm = document.getElementById('settingConfirm');
-        const limitAmount = document.getElementById('limitAmount');
-        const toast = document.getElementById('toast');
-
-        // 统一时间格式化函数：yyyy-MM-dd HH:mm:ss
+        // 统一时间格式化
         function formatDate(date) {
             const d = new Date(date);
             const year = d.getFullYear();
@@ -757,26 +650,48 @@
             const seconds = String(d.getSeconds()).padStart(2, '0');
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
-        // 排序权重：待审批=0 > 已驳回=1 > 已通过=2
+
+        // 解析时间字符串转时间戳用于排序
+        function getTimeStamp(timeStr) {
+            return new Date(timeStr).getTime();
+        }
+
+        // 状态排序权重：待审核>待收款>已取消>已驳回>已完结
+        const sortWeight = {
+            pending: 0,
+            "wait-pay": 1,
+            cancel: 2,
+            rejected: 3,
+            finish: 4
+        };
+
+        // 【核心修改】排序逻辑：先按状态优先级升序，同状态下按申请时间倒序
         function sortTable() {
             allRows = Array.from(tableBody.querySelectorAll('tr'));
-            const sortWeight = { pending: 0, rejected: 1, approved: 2 };
-            allRows.sort((a, b) => {
-                const s1 = a.dataset.status;
-                const s2 = b.dataset.status;
-                return sortWeight[s1] - sortWeight[s2];
+            allRows.sort((rowA, rowB) => {
+                // 1. 优先按状态权重排序
+                const statusA = rowA.dataset.status;
+                const statusB = rowB.dataset.status;
+                const weightA = sortWeight[statusA];
+                const weightB = sortWeight[statusB];
+                if (weightA !== weightB) {
+                    return weightA - weightB;
+                }
+                // 2. 状态相同时，申请时间倒序（最新时间在前）
+                const timeA = getTimeStamp(rowA.cells[4].textContent);
+                const timeB = getTimeStamp(rowB.cells[4].textContent);
+                return timeB - timeA;
             });
             renderPage();
         }
-        // 渲染当前页 + 序号
+
+        // 渲染分页
         function renderPage() {
             totalPage = Math.ceil(allRows.length / pageSize);
             pageInfo.innerText = `共 ${allRows.length} 条，${totalPage} 页`;
-            // 页码边界控制
             if (currentPage < 1) currentPage = 1;
             if (currentPage > totalPage) currentPage = totalPage;
             pageInput.value = currentPage;
-            // 上下页禁用状态
             prevPage.disabled = currentPage === 1;
             nextPage.disabled = currentPage === totalPage;
             const start = (currentPage - 1) * pageSize;
@@ -790,24 +705,24 @@
             });
             bindOpBtn();
         }
-        // 初始化
+
+        // 初始化排序渲染
         sortTable();
 
-        // 关闭所有弹窗
+        // 关闭弹窗
         closeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 auditModal.style.display = 'none';
                 confirmModal.style.display = 'none';
-                settingModal.style.display = 'none';
             });
         });
-        [auditModal, confirmModal, settingModal].forEach(modal => {
+        [auditModal, confirmModal].forEach(modal => {
             modal.addEventListener('click', e => {
                 if (e.target === modal) modal.style.display = 'none';
             });
         });
 
-        // 绑定操作按钮事件
+        // 绑定操作按钮
         function bindOpBtn() {
             document.querySelectorAll('.open-audit').forEach(btn => {
                 btn.onclick = function () {
@@ -821,15 +736,16 @@
                     const applyTime = currentAuditRow.cells[4].textContent;
                     const auditUser = currentAuditRow.cells[6].textContent;
                     const auditTime = currentAuditRow.cells[7].textContent;
-                    // 基础信息赋值
+
                     document.getElementById('modalUserId').textContent = userId;
                     document.getElementById('modalAmount').textContent = amount;
                     document.getElementById('modalPayInfo').textContent = `${payMethod} - ${payAccount}`;
                     document.getElementById('modalTime').textContent = applyTime;
                     document.getElementById('modalAuditUser').textContent = auditUser;
                     document.getElementById('modalAuditTime').textContent = auditTime;
+
+                    // 仅待审核可操作审批，其余状态只读
                     if (status === 'pending') {
-                        // 待审批：审批操作页
                         modalTitle.innerText = '提现审批';
                         remarkLabel.innerText = '审批意见';
                         auditRemark.value = '';
@@ -839,9 +755,24 @@
                         auditRemark.disabled = false;
                         auditRemark.placeholder = '如有驳回请务必填写原因...';
                     } else {
-                        // 已驳回/已通过：详情查看页
                         modalTitle.innerText = '审批详情';
-                        remarkLabel.innerText = status === 'rejected' ? '驳回说明' : '审批意见';
+                        // 根据状态切换备注标题
+                        switch (status) {
+                            case 'cancel':
+                                remarkLabel.innerText = '取消备注';
+                                break;
+                            case 'rejected':
+                                remarkLabel.innerText = '驳回说明';
+                                break;
+                            case 'wait-pay':
+                                remarkLabel.innerText = '待收款备注';
+                                break;
+                            case 'finish':
+                                remarkLabel.innerText = '完结备注';
+                                break;
+                            default:
+                                remarkLabel.innerText = '备注';
+                        }
                         auditRemark.value = remark;
                         charCount.textContent = auditRemark.value.length;
                         textareaWrap.classList.add('read-only');
@@ -854,12 +785,12 @@
             });
         }
 
-        // 文本域字数统计
+        // 字数统计
         auditRemark.addEventListener('input', () => {
             charCount.textContent = auditRemark.value.length;
         });
 
-        // 审批-驳回
+        // 驳回操作
         document.getElementById('rejectBtn').addEventListener('click', () => {
             if (!auditRemark.value.trim()) {
                 alert('驳回请务必填写原因！');
@@ -869,7 +800,7 @@
                 const nowTime = formatDate(new Date());
                 currentAuditRow.dataset.status = 'rejected';
                 currentAuditRow.dataset.remark = auditRemark.value;
-                currentAuditRow.cells[5].innerHTML = '<span class="status-tag rejected">审核驳回</span>';
+                currentAuditRow.cells[5].innerHTML = '<span class="status-tag rejected">已驳回</span>';
                 currentAuditRow.cells[6].textContent = '亚历克斯';
                 currentAuditRow.cells[7].textContent = nowTime;
                 currentAuditRow.cells[8].innerHTML = '<button class="op-btn detail open-audit">详情</button>';
@@ -880,43 +811,44 @@
             sortTable();
         });
 
-        // 审批-通过：弹出二次确认
+        // 通过按钮弹出确认
         document.getElementById('approveBtn').addEventListener('click', () => {
             auditModal.style.display = 'none';
             confirmModal.style.display = 'flex';
         });
 
-        // 二次确认-取消
+        // 取消确认弹窗
         document.getElementById('cancelConfirm').addEventListener('click', () => {
             confirmModal.style.display = 'none';
             auditModal.style.display = 'flex';
         });
 
-        // 二次确认-确认
+        // 确认通过
         document.getElementById('confirmApprove').addEventListener('click', () => {
             confirmModal.style.display = 'none';
             if (currentAuditRow) {
                 const nowTime = formatDate(new Date());
-                currentAuditRow.dataset.status = 'approved';
+                // 通过后流转为待收款
+                currentAuditRow.dataset.status = 'wait-pay';
                 currentAuditRow.dataset.remark = auditRemark.value;
-                currentAuditRow.cells[5].innerHTML = '<span class="status-tag approved">审核通过</span>';
+                currentAuditRow.cells[5].innerHTML = '<span class="status-tag wait-pay">待收款</span>';
                 currentAuditRow.cells[6].textContent = '亚历克斯';
                 currentAuditRow.cells[7].textContent = nowTime;
                 currentAuditRow.cells[8].innerHTML = '<button class="op-btn detail open-audit">详情</button>';
             }
-            alert('已通过该笔提现申请');
+            alert('已通过该笔提现申请，状态流转为待收款');
             currentAuditRow = null;
             sortTable();
         });
 
-        // 查询按钮
+        // 查询
         queryBtn.addEventListener('click', function () {
             alert('执行查询操作，刷新列表并回到第一页');
             currentPage = 1;
             sortTable();
         });
 
-        // 导出按钮
+        // 导出
         exportBtn.addEventListener('click', function () {
             alert('触发数据导出功能');
         });
@@ -928,6 +860,7 @@
                 renderPage();
             }
         });
+
         // 下一页
         nextPage.addEventListener('click', () => {
             if (currentPage < totalPage) {
@@ -935,6 +868,7 @@
                 renderPage();
             }
         });
+
         // 页码跳转
         goPage.addEventListener('click', () => {
             let page = parseInt(pageInput.value);
@@ -945,50 +879,6 @@
             }
             currentPage = page;
             renderPage();
-        });
-
-        // ========== 审批设置弹窗逻辑 ==========
-        // 打开审批设置弹窗
-        settingBtn.addEventListener('click', () => {
-            settingModal.style.display = 'flex';
-        });
-
-        // 人工审批开关切换：控制金额输入框显示/隐藏
-        manualSwitch.addEventListener('change', () => {
-            if (manualSwitch.checked) {
-                amountInputWrap.classList.add('show');
-            } else {
-                amountInputWrap.classList.remove('show');
-            }
-        });
-
-        // 限制金额输入框只能输入数字
-        limitAmount.addEventListener('input', function () {
-            // 过滤非数字字符
-            this.value = this.value.replace(/[^\d]/g, '');
-        });
-
-        // 取消按钮：直接关闭，无提示
-        settingCancel.addEventListener('click', () => {
-            settingModal.style.display = 'none';
-        });
-
-        // 确认按钮：校验 + 提交
-        settingConfirm.addEventListener('click', () => {
-            // 开关开启时校验金额
-            if (manualSwitch.checked) {
-                const val = limitAmount.value.trim();
-                if (!val) {
-                    alert('请填写人工审批金额');
-                    return;
-                }
-            }
-            // 校验通过，展示吐司，3秒后关闭弹窗
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-                settingModal.style.display = 'none';
-            }, 3000);
         });
     </script>
 </body>
